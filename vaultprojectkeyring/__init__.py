@@ -1,1 +1,1 @@
-from vaultbackend import VaultProjectKeyring
+from vaultprojectkeyring.vaultbackend import VaultProjectKeyring

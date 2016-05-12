@@ -25,7 +25,7 @@ class VaultProjectKeyring(keyring.backend.KeyringBackend):
             'VAULT_ADDR', 'http://localhost:8200'
         )
         self.token = token if token else os.environ.get('VAULT_TOKEN', None)
-        if verify:
+        if verify is not None:
             self.verify = verify
         else:
             self.verify = 'VAULT_SKIP_VERIFY' not in os.environ
