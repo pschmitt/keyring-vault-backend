@@ -45,7 +45,10 @@ class VaultProjectKeyring(keyring.backend.KeyringBackend):
         )
 
     def __get_path(self, servicename, username):
-        return '{}/{}/{}'.format(self.vault_backend, servicename, username)
+        if username:
+            return '{}/{}/{}'.format(self.vault_backend, servicename, username)
+        else:
+            return '{}/{}'.format(self.vault_backend, servicename)
 
     def set_password(self, servicename, username, password):
         client = self.__get_client()
