@@ -35,7 +35,7 @@ class VaultProjectKeyring(keyring.backend.KeyringBackend):
         self.vault_backend = vault_backend
 
     def __get_client(self):
-        return hvac.Client(
+        client = hvac.Client(
             self.url,
             token=self.token,
             cert=self.cert,
@@ -43,6 +43,8 @@ class VaultProjectKeyring(keyring.backend.KeyringBackend):
             timeout=self.timeout,
             proxies=self.proxies
         )
+        client.renew_token()
+        return client
 
     def __get_path(self, servicename, username):
         if username:
