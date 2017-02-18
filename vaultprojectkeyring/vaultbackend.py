@@ -7,7 +7,7 @@ import keyring.backend
 import logging
 import os
 import sys
-
+from hvac.exceptions import InvalidRequest
 
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -20,7 +20,8 @@ class VaultProjectKeyring(keyring.backend.KeyringBackend):
     priority = 1
 
     def __init__(self, url=None, token=None, cert=None, verify=None,
-                 timeout=None, proxies=None, vault_backend='keyring'):
+                 timeout=None, proxies=None, vault_backend='keyring',
+                 autorenew_token=False):
         self.url = url if url else os.environ.get(
             'VAULT_ADDR', 'http://localhost:8200'
         )
@@ -33,6 +34,7 @@ class VaultProjectKeyring(keyring.backend.KeyringBackend):
         self.timeout = timeout
         self.proxies = proxies
         self.vault_backend = vault_backend
+        self.autorenew = autorenew_token
 
     def __get_client(self):
         client = hvac.Client(
@@ -43,7 +45,12 @@ class VaultProjectKeyring(keyring.backend.KeyringBackend):
             timeout=self.timeout,
             proxies=self.proxies
         )
-        client.renew_token()
+        if self.autorenew:
+            try:
+                client.renew_token()
+            except InvalidRequest as e:
+                logger.error("Vault token cannot be renewed: %s"
+                             % e.args[0])
         return client
 
     def __get_path(self, servicename, username):
