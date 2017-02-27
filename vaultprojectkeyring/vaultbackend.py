@@ -2,12 +2,13 @@
 # coding: utf-8
 
 from __future__ import print_function
+from datetime import datetime
+from hvac.exceptions import InvalidRequest
 import hvac
 import keyring.backend
 import logging
 import os
 import sys
-
 
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -74,6 +75,37 @@ class VaultProjectKeyring(keyring.backend.KeyringBackend):
             return keyring.errors.PasswordDeleteError(e.message)
 
 
+class AutoRenewingTokenKeyring(VaultProjectKeyring):
+    def __init__(self, interval=300, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.token is None:
+            raise keyring.errors.InitError("You cannot use "
+                                           "AutoRenewingTokenKeyring without "
+                                           "an existing vault token")
+        self.interval = interval
+        self.last_renewed = None
+
+    def _VaultProjectKeyring__get_client(self):
+        client = hvac.Client(
+            self.url,
+            token=self.token,
+            cert=self.cert,
+            verify=self.verify,
+            timeout=self.timeout,
+            proxies=self.proxies
+        )
+        try:
+            if self.last_renewed is None or \
+                    (datetime.now() - self.last_renewed
+                     ).total_seconds() > self.interval:
+                client.renew_token()
+                self.last_renewed = datetime.now()
+        except InvalidRequest as e:
+            logger.error("Vault token cannot be renewed: %s"
+                         % e.args[0])
+        return client
+
+
 if __name__ == '__main__':
     sample_service = 'sample-service'
     sample_username = 'pschmitt'
@@ -89,7 +121,7 @@ if __name__ == '__main__':
         print('Failed to store password', file=sys.stderr)
 
     assert keyring.get_password(sample_service, sample_username) \
-        == sample_password, 'Failed to retrieve password'
+           == sample_password, 'Failed to retrieve password'
 
     try:
         keyring.delete_password(sample_service, sample_username)
