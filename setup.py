@@ -33,7 +33,7 @@ def get_private_deps(requirements_file='requirements.txt'):
 
 setup(
     name='keyring-vault-backend',
-    version='1.1.0',
+    version='1.2.0',
     description='Hashicorp vault backend for python-keyring',
     author='Philipp Schmitt',
     author_email='philipp.schmitt@post.lu',
