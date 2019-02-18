@@ -1,2 +1,3 @@
 from vaultbackend import VaultProjectKeyring
+from secretbackend import get_secret_backend
 import authbackend
