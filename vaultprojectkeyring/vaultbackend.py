@@ -9,6 +9,7 @@ import keyring.backend
 import logging
 import os
 import sys
+from authbackend import VaultProjectKeyringTokenAuth
 
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -25,31 +26,44 @@ class VaultProjectKeyring(keyring.backend.KeyringBackend):
         self.url = url if url else os.environ.get(
             'VAULT_ADDR', 'http://localhost:8200'
         )
-        self.token = token if token else os.environ.get('VAULT_TOKEN', None)
+        self.auth_method = None
+        token = token if token else os.environ.get('VAULT_TOKEN', None)
         if verify is not None:
             self.verify = verify
         else:
             self.verify = 'VAULT_SKIP_VERIFY' not in os.environ
+
+        if token is not None:
+            self.auth_method = VaultProjectKeyringTokenAuth(token)
+
         self.cert = cert
         self.timeout = timeout
         self.proxies = proxies
         self.vault_backend = vault_backend
 
+        self.client = None
+
     def __get_client(self):
-        return hvac.Client(
-            self.url,
-            token=self.token,
-            cert=self.cert,
-            verify=self.verify,
-            timeout=self.timeout,
-            proxies=self.proxies
-        )
+        if self.client is None:
+            self.client = hvac.Client(
+                self.url,
+                cert=self.cert,
+                verify=self.verify,
+                timeout=self.timeout,
+                proxies=self.proxies
+            )
+        self.auth_method.login(self.client)
+        return self.client
 
     def __get_path(self, servicename, username):
         if username:
             return '{}/{}/{}'.format(self.vault_backend, servicename, username)
         else:
             return '{}/{}'.format(self.vault_backend, servicename)
+
+    def set_auth_method(self, auth):
+        self.auth_method = auth
+        self.__get_client()
 
     def set_password(self, servicename, username, password):
         client = self.__get_client()
