@@ -48,6 +48,7 @@ class VaultProjectKeyring(KeyringBackend):
         self.backend_type = backend_type
         self.secret_prefix = secret_prefix
         self.interval = interval
+        super().__init__()
 
         # don't initialise client/secret_backend here as __init__ is called during backend discovery
 
